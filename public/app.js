@@ -19,6 +19,8 @@ const state = {
   searchTimeout: null,
   pagination: { page: 1, pageSize: 50, total: 0 },
   budgetGoals: [],
+  modalTrigger: null,
+  confirmTrigger: null,
 };
 
 // ===== API =====
@@ -133,7 +135,7 @@ function lookupName(list, id) {
 }
 
 function showLoading(container) {
-  container.innerHTML = '<div class="loading-spinner"></div>';
+  container.innerHTML = '<div class="loading-spinner" role="status" aria-label="Loading"></div>';
 }
 
 function showError(container, msg) {
@@ -143,6 +145,135 @@ function showError(container, msg) {
 function escapeHtml(str) {
   if (!str) return '';
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// ===== Skeleton Loaders =====
+function showDashboardSkeleton(container) {
+  container.innerHTML = `
+    <div class="summary-cards">
+      ${[1,2,3].map(() => `
+        <div class="skeleton-summary-card">
+          <div class="skeleton skeleton-text narrow"></div>
+          <div class="skeleton skeleton-heading"></div>
+          <div class="skeleton skeleton-text medium"></div>
+        </div>
+      `).join('')}
+    </div>
+    <div class="dashboard-grid">
+      <div class="card">
+        <div class="skeleton skeleton-text narrow" style="margin-bottom:16px"></div>
+        <div class="skeleton skeleton-chart"></div>
+      </div>
+      <div class="card">
+        <div class="skeleton skeleton-text narrow" style="margin-bottom:16px"></div>
+        ${[1,2,3,4].map(() => '<div class="skeleton skeleton-text wide" style="margin-bottom:12px"></div>').join('')}
+      </div>
+    </div>
+    <div class="card">
+      <div class="skeleton skeleton-text narrow" style="margin-bottom:16px"></div>
+      ${[1,2,3,4,5].map(() => `
+        <div class="skeleton-table-row">
+          <div class="skeleton"></div>
+          <div class="skeleton"></div>
+          <div class="skeleton"></div>
+          <div class="skeleton"></div>
+          <div class="skeleton"></div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function showTableSkeleton(container, rows = 5) {
+  container.innerHTML = Array.from({ length: rows }, () => `
+    <div class="skeleton-table-row">
+      <div class="skeleton"></div>
+      <div class="skeleton"></div>
+      <div class="skeleton"></div>
+      <div class="skeleton"></div>
+      <div class="skeleton"></div>
+    </div>
+  `).join('');
+}
+
+function showCategorySkeleton(container) {
+  container.innerHTML = `
+    <div class="category-grid">
+      ${[1,2,3,4].map(() => `
+        <div class="skeleton-category-card">
+          <div class="skeleton skeleton-text narrow" style="margin-bottom:12px"></div>
+          <div style="display:flex;justify-content:space-between">
+            <div class="skeleton skeleton-heading" style="width:40%"></div>
+            <div class="skeleton skeleton-text narrow"></div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+// ===== Confirm Modal =====
+let confirmResolve = null;
+
+function showConfirm(title, message) {
+  return new Promise((resolve) => {
+    confirmResolve = resolve;
+    document.getElementById('confirm-title').textContent = title;
+    document.getElementById('confirm-message').textContent = message;
+    const overlay = document.getElementById('confirm-overlay');
+    state.confirmTrigger = document.activeElement;
+    overlay.classList.add('open');
+    lucide.createIcons({ nodes: [overlay] });
+    document.getElementById('confirm-cancel-btn').focus();
+  });
+}
+
+function closeConfirm(result) {
+  const overlay = document.getElementById('confirm-overlay');
+  overlay.classList.remove('open');
+  if (confirmResolve) {
+    confirmResolve(result);
+    confirmResolve = null;
+  }
+  if (state.confirmTrigger) {
+    state.confirmTrigger.focus();
+    state.confirmTrigger = null;
+  }
+}
+
+function initConfirmModal() {
+  document.getElementById('confirm-cancel-btn').addEventListener('click', () => closeConfirm(false));
+  document.getElementById('confirm-ok-btn').addEventListener('click', () => closeConfirm(true));
+
+  document.getElementById('confirm-overlay').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeConfirm(false);
+  });
+
+  document.getElementById('confirm-overlay').addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeConfirm(false);
+    if (e.key === 'Tab') {
+      trapFocusInElement(document.querySelector('.confirm-modal'), e);
+    }
+  });
+}
+
+// ===== Focus Trap Utility =====
+function trapFocusInElement(container, e) {
+  const focusable = container.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+  if (focusable.length === 0) return;
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (e.shiftKey) {
+    if (document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    }
+  } else {
+    if (document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  }
 }
 
 // ===== Auth =====
@@ -432,6 +563,23 @@ function toggleNotifPanel() {
   }
 }
 
+// ===== CSV Export =====
+function buildExportUrl() {
+  const params = new URLSearchParams();
+  const f = state.expenseFilters;
+  if (f.category) params.set('category', f.category);
+  if (f.business) params.set('business', f.business);
+  if (f.who) params.set('who', f.who);
+  if (f.payment_method) params.set('payment_method', f.payment_method);
+  if (f.start_date) params.set('start_date', f.start_date);
+  if (f.end_date) params.set('end_date', f.end_date);
+  if (f.search) params.set('search', f.search);
+  if (state.expenseSort.col) params.set('sort', state.expenseSort.col);
+  if (state.expenseSort.order) params.set('order', state.expenseSort.order);
+  const qs = params.toString();
+  return '/api/expenses/export' + (qs ? '?' + qs : '');
+}
+
 // ===== Router =====
 const viewTitles = {
   dashboard: 'Dashboard',
@@ -479,7 +627,7 @@ function renderView(viewName) {
 // ===== Dashboard View =====
 async function renderDashboard() {
   const container = document.getElementById('view-dashboard');
-  showLoading(container);
+  showDashboardSkeleton(container);
 
   try {
     const [summary, recentRes, chartRes, recurring, budgetGoals] = await Promise.all([
@@ -598,28 +746,30 @@ async function renderDashboard() {
           <a href="#transactions" class="view-all-link">View All &#8599;</a>
         </div>
         ${recentExpenses.length ? `
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Description</th>
-                <th>Category</th>
-                <th>Who</th>
-                <th class="text-right">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${recentExpenses.map(e => `
+          <div class="table-scroll-wrapper">
+            <table class="data-table">
+              <thead>
                 <tr>
-                  <td>${formatDate(e.date)}</td>
-                  <td>${escapeHtml(e.description)}</td>
-                  <td><span class="badge ${getCategoryBadgeClass(e.categories?.name)}">${escapeHtml(e.categories?.name || '—')}</span></td>
-                  <td>${escapeHtml(e.who_bought_it)}</td>
-                  <td class="col-amount">${formatCurrency(e.amount)}</td>
+                  <th>Date</th>
+                  <th>Description</th>
+                  <th>Category</th>
+                  <th>Who</th>
+                  <th class="text-right">Amount</th>
                 </tr>
-              `).join('')}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                ${recentExpenses.map(e => `
+                  <tr>
+                    <td>${formatDate(e.date)}</td>
+                    <td>${escapeHtml(e.description)}</td>
+                    <td><span class="badge ${getCategoryBadgeClass(e.categories?.name)}">${escapeHtml(e.categories?.name || '—')}</span></td>
+                    <td>${escapeHtml(e.who_bought_it)}</td>
+                    <td class="col-amount">${formatCurrency(e.amount)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
         ` : '<div class="empty-state"><h3>No transactions yet</h3><p>Add your first expense to get started.</p></div>'}
       </div>
     `;
@@ -768,10 +918,22 @@ async function renderTransactions() {
           <label>Search</label>
           <input type="text" id="filter-search" placeholder="Search descriptions...">
         </div>
+        <div class="form-group" style="flex:0 0 auto;min-width:auto">
+          <label class="sr-only">Export</label>
+          <button id="export-csv-btn" class="btn btn-secondary" aria-label="Export to CSV">
+            <i data-lucide="download"></i>
+            Export CSV
+          </button>
+        </div>
       </div>
-      <div id="transactions-table-area"><div class="loading-spinner"></div></div>
+      <div id="transactions-table-area"><div class="loading-spinner" role="status" aria-label="Loading"></div></div>
     `;
     attachFilterListeners();
+    document.getElementById('export-csv-btn')?.addEventListener('click', () => {
+      updateFiltersFromInputs();
+      window.location.href = buildExportUrl();
+    });
+    lucide.createIcons();
   }
 
   await fetchAndRenderTransactions();
@@ -817,7 +979,7 @@ function updateFiltersFromInputs() {
 async function fetchAndRenderTransactions() {
   const area = document.getElementById('transactions-table-area');
   if (!area) return;
-  showLoading(area);
+  showTableSkeleton(area, 8);
 
   try {
     const offset = (state.pagination.page - 1) * state.pagination.pageSize;
@@ -855,37 +1017,43 @@ async function fetchAndRenderTransactions() {
       if (col === sortCol) return sortOrder === 'asc' ? 'sorted-asc' : 'sorted-desc';
       return '';
     };
+    const ariaSort = (col) => {
+      if (col === sortCol) return sortOrder === 'asc' ? 'ascending' : 'descending';
+      return 'none';
+    };
 
     area.innerHTML = `
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th class="${sortClass('date')}" data-sort="date">Date</th>
-            <th class="${sortClass('description')}" data-sort="description">Description</th>
-            <th>Category</th>
-            <th>Business</th>
-            <th>Who</th>
-            <th class="text-right ${sortClass('amount')}" data-sort="amount">Amount</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          ${expenses.map(e => `
-            <tr data-id="${e.id}">
-              <td>${formatDate(e.date)}</td>
-              <td>${escapeHtml(e.description)}</td>
-              <td><span class="badge ${getCategoryBadgeClass(e.categories?.name)}">${escapeHtml(e.categories?.name || '—')}</span></td>
-              <td>${escapeHtml(e.businesses?.name || '—')}</td>
-              <td>${escapeHtml(e.who_bought_it)}</td>
-              <td class="col-amount">${formatCurrency(e.amount)}</td>
-              <td class="col-actions">
-                <button class="btn btn-sm btn-secondary edit-expense-btn" data-id="${e.id}">Edit</button>
-                <button class="btn btn-sm btn-danger delete-expense-btn" data-id="${e.id}">Delete</button>
-              </td>
+      <div class="table-scroll-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th class="${sortClass('date')}" data-sort="date" tabindex="0" aria-sort="${ariaSort('date')}">Date</th>
+              <th class="${sortClass('description')}" data-sort="description" tabindex="0" aria-sort="${ariaSort('description')}">Description</th>
+              <th>Category</th>
+              <th>Business</th>
+              <th>Who</th>
+              <th class="text-right ${sortClass('amount')}" data-sort="amount" tabindex="0" aria-sort="${ariaSort('amount')}">Amount</th>
+              <th></th>
             </tr>
-          `).join('')}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            ${expenses.map(e => `
+              <tr data-id="${e.id}">
+                <td>${formatDate(e.date)}</td>
+                <td>${escapeHtml(e.description)}</td>
+                <td><span class="badge ${getCategoryBadgeClass(e.categories?.name)}">${escapeHtml(e.categories?.name || '—')}</span></td>
+                <td>${escapeHtml(e.businesses?.name || '—')}</td>
+                <td>${escapeHtml(e.who_bought_it)}</td>
+                <td class="col-amount">${formatCurrency(e.amount)}</td>
+                <td class="col-actions">
+                  <button class="btn btn-sm btn-secondary edit-expense-btn" data-id="${e.id}" aria-label="Edit expense">Edit</button>
+                  <button class="btn btn-sm btn-danger delete-expense-btn" data-id="${e.id}" aria-label="Delete expense">Delete</button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
       <div class="pagination-bar">
         <div class="pagination-left">
           <label for="page-size-select" style="margin-bottom:0;display:inline;margin-right:6px">Show</label>
@@ -897,8 +1065,8 @@ async function fetchAndRenderTransactions() {
         </div>
         <div class="pagination-info">Page ${state.pagination.page} of ${totalPages}</div>
         <div class="pagination-right">
-          <button class="btn btn-secondary btn-sm pagination-btn" id="pagination-prev" ${state.pagination.page <= 1 ? 'disabled' : ''}>Previous</button>
-          <button class="btn btn-secondary btn-sm pagination-btn" id="pagination-next" ${state.pagination.page >= totalPages ? 'disabled' : ''}>Next</button>
+          <button class="btn btn-secondary btn-sm pagination-btn" id="pagination-prev" ${state.pagination.page <= 1 ? 'disabled' : ''} aria-label="Previous page">Previous</button>
+          <button class="btn btn-secondary btn-sm pagination-btn" id="pagination-next" ${state.pagination.page >= totalPages ? 'disabled' : ''} aria-label="Next page">Next</button>
         </div>
       </div>
     `;
@@ -922,9 +1090,9 @@ async function fetchAndRenderTransactions() {
       fetchAndRenderTransactions();
     });
 
-    // Sort click handlers
+    // Sort click + keyboard handlers
     area.querySelectorAll('th[data-sort]').forEach(th => {
-      th.addEventListener('click', () => {
+      const sortHandler = () => {
         const col = th.dataset.sort;
         if (state.expenseSort.col === col) {
           state.expenseSort.order = state.expenseSort.order === 'asc' ? 'desc' : 'asc';
@@ -934,6 +1102,13 @@ async function fetchAndRenderTransactions() {
         }
         state.pagination.page = 1;
         fetchAndRenderTransactions();
+      };
+      th.addEventListener('click', sortHandler);
+      th.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          sortHandler();
+        }
       });
     });
 
@@ -947,7 +1122,8 @@ async function fetchAndRenderTransactions() {
 
     area.querySelectorAll('.delete-expense-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
-        if (!confirm('Delete this expense?')) return;
+        const confirmed = await showConfirm('Delete Expense', 'Are you sure you want to delete this expense? This action cannot be undone.');
+        if (!confirmed) return;
         try {
           await api.deleteExpense(btn.dataset.id);
           showToast('Expense deleted', 'success');
@@ -967,7 +1143,7 @@ async function fetchAndRenderTransactions() {
 // ===== Categories View =====
 async function renderCategories() {
   const container = document.getElementById('view-categories');
-  showLoading(container);
+  showCategorySkeleton(container);
 
   try {
     const [summary, expensesRes] = await Promise.all([
@@ -1029,7 +1205,7 @@ async function renderCategories() {
 // ===== Recurring View =====
 async function renderRecurring() {
   const container = document.getElementById('view-recurring');
-  showLoading(container);
+  showTableSkeleton(container, 5);
 
   try {
     const recurring = await api.getRecurring();
@@ -1057,43 +1233,45 @@ async function renderRecurring() {
       <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
         ${addBtn}
       </div>
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th class="text-right">Amount</th>
-            <th>Frequency</th>
-            <th>Next Due</th>
-            <th>Category</th>
-            <th>Status</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          ${recurring.map(r => {
-            const due = new Date(r.next_due + 'T00:00:00');
-            const isOverdue = r.status === 'active' && due < now;
-            const statusClass = r.status === 'active' ? 'status-active' : 'status-paused';
-            return `
-              <tr data-id="${r.id}">
-                <td>${escapeHtml(r.name)}</td>
-                <td class="col-amount">${formatCurrency(r.amount)}</td>
-                <td style="text-transform:capitalize">${escapeHtml(r.frequency)}</td>
-                <td class="${isOverdue ? 'overdue' : ''}">${formatDate(r.next_due)}${isOverdue ? ' (Overdue)' : ''}</td>
-                <td><span class="badge ${getCategoryBadgeClass(r.categories?.name)}">${escapeHtml(r.categories?.name || '—')}</span></td>
-                <td><span class="${statusClass}" style="text-transform:capitalize">${r.status}</span></td>
-                <td class="col-actions">
-                  <button class="btn btn-sm btn-secondary toggle-status-btn" data-id="${r.id}" data-status="${r.status}">
-                    ${r.status === 'active' ? 'Pause' : 'Resume'}
-                  </button>
-                  <button class="btn btn-sm btn-secondary edit-recurring-btn" data-id="${r.id}">Edit</button>
-                  <button class="btn btn-sm btn-danger delete-recurring-btn" data-id="${r.id}">Delete</button>
-                </td>
-              </tr>
-            `;
-          }).join('')}
-        </tbody>
-      </table>
+      <div class="table-scroll-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th class="text-right">Amount</th>
+              <th>Frequency</th>
+              <th>Next Due</th>
+              <th>Category</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            ${recurring.map(r => {
+              const due = new Date(r.next_due + 'T00:00:00');
+              const isOverdue = r.status === 'active' && due < now;
+              const statusClass = r.status === 'active' ? 'status-active' : 'status-paused';
+              return `
+                <tr data-id="${r.id}">
+                  <td>${escapeHtml(r.name)}</td>
+                  <td class="col-amount">${formatCurrency(r.amount)}</td>
+                  <td style="text-transform:capitalize">${escapeHtml(r.frequency)}</td>
+                  <td class="${isOverdue ? 'overdue' : ''}">${formatDate(r.next_due)}${isOverdue ? ' (Overdue)' : ''}</td>
+                  <td><span class="badge ${getCategoryBadgeClass(r.categories?.name)}">${escapeHtml(r.categories?.name || '—')}</span></td>
+                  <td><span class="${statusClass}" style="text-transform:capitalize">${r.status}</span></td>
+                  <td class="col-actions">
+                    <button class="btn btn-sm btn-secondary toggle-status-btn" data-id="${r.id}" data-status="${r.status}" aria-label="${r.status === 'active' ? 'Pause' : 'Resume'} recurring expense">
+                      ${r.status === 'active' ? 'Pause' : 'Resume'}
+                    </button>
+                    <button class="btn btn-sm btn-secondary edit-recurring-btn" data-id="${r.id}" aria-label="Edit recurring expense">Edit</button>
+                    <button class="btn btn-sm btn-danger delete-recurring-btn" data-id="${r.id}" aria-label="Delete recurring expense">Delete</button>
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
     `;
 
     attachAddRecurringBtn();
@@ -1123,7 +1301,8 @@ async function renderRecurring() {
     // Delete
     container.querySelectorAll('.delete-recurring-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
-        if (!confirm('Delete this recurring expense?')) return;
+        const confirmed = await showConfirm('Delete Recurring Expense', 'Are you sure you want to delete this recurring expense? This action cannot be undone.');
+        if (!confirmed) return;
         try {
           await api.deleteRecurring(btn.dataset.id);
           showToast('Recurring expense deleted', 'success');
@@ -1200,12 +1379,6 @@ async function renderSettings() {
           <div class="setting-description">Invite others to share expense tracking</div>
         </div>
       </div>
-      <div class="setting-row">
-        <div>
-          <div class="setting-label">Export Data</div>
-          <div class="setting-description">Download your expenses as CSV</div>
-        </div>
-      </div>
     </div>
   `;
 
@@ -1271,10 +1444,13 @@ function openModal(mode, data) {
   const expenseForm = document.getElementById('expense-form');
   const recurringForm = document.getElementById('recurring-form');
 
+  state.modalTrigger = document.activeElement;
+
   if (mode === 'expense') {
     expenseForm.style.display = '';
     recurringForm.style.display = 'none';
     document.getElementById('expense-form-title').textContent = data ? 'Edit Expense' : 'Add Expense';
+    overlay.setAttribute('aria-labelledby', 'expense-form-title');
     clearValidation(expenseForm);
     populateExpenseForm(data);
     state.editingExpense = data || null;
@@ -1282,6 +1458,7 @@ function openModal(mode, data) {
     expenseForm.style.display = 'none';
     recurringForm.style.display = '';
     document.getElementById('recurring-form-title').textContent = data ? 'Edit Recurring Expense' : 'Add Recurring Expense';
+    overlay.setAttribute('aria-labelledby', 'recurring-form-title');
     clearValidation(recurringForm);
     populateRecurringForm(data);
     state.editingRecurring = data || null;
@@ -1289,12 +1466,22 @@ function openModal(mode, data) {
 
   overlay.classList.add('open');
   lucide.createIcons();
+
+  // Focus first input after open
+  setTimeout(() => {
+    const firstInput = overlay.querySelector('input:not([type="hidden"]), select, textarea');
+    if (firstInput) firstInput.focus();
+  }, 50);
 }
 
 function closeModal() {
   document.getElementById('modal-overlay').classList.remove('open');
   state.editingExpense = null;
   state.editingRecurring = null;
+  if (state.modalTrigger) {
+    state.modalTrigger.focus();
+    state.modalTrigger = null;
+  }
 }
 
 function populateExpenseForm(data) {
@@ -1489,10 +1676,23 @@ async function init() {
   document.getElementById('modal-overlay').addEventListener('click', (e) => {
     if (e.target === e.currentTarget) closeModal();
   });
+
+  // Modal focus trap
+  document.getElementById('modal-overlay').addEventListener('keydown', (e) => {
+    if (e.key === 'Tab') {
+      trapFocusInElement(document.querySelector('.modal'), e);
+    }
+  });
+
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
+      // Close confirm first if open, then modal, then notif panel
+      const confirmOverlay = document.getElementById('confirm-overlay');
+      if (confirmOverlay.classList.contains('open')) {
+        closeConfirm(false);
+        return;
+      }
       closeModal();
-      // Also close notif panel
       document.getElementById('notif-panel')?.classList.remove('open');
     }
   });
@@ -1535,6 +1735,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('notif-close-btn').addEventListener('click', () => {
     document.getElementById('notif-panel').classList.remove('open');
   });
+
+  // Init confirm modal
+  initConfirmModal();
 
   lucide.createIcons();
 

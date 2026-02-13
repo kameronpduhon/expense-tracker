@@ -2,11 +2,17 @@ const express = require('express');
 const router = express.Router();
 const supabase = require('../supabaseClient');
 
+const asyncHandler = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+
 // GET /api/summary — spending totals for a given month
-router.get('/', async (req, res) => {
+router.get('/', asyncHandler(async (req, res) => {
   const now = new Date();
-  const month = parseInt(req.query.month) || (now.getMonth() + 1);
-  const year = parseInt(req.query.year) || now.getFullYear();
+  let month = parseInt(req.query.month) || (now.getMonth() + 1);
+  let year = parseInt(req.query.year) || now.getFullYear();
+
+  // Validate bounds
+  if (month < 1 || month > 12) month = now.getMonth() + 1;
+  if (year < 2000 || year > 2100) year = now.getFullYear();
 
   // Build date range for requested month
   const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
@@ -73,6 +79,6 @@ router.get('/', async (req, res) => {
     byBusiness,
     byWho
   });
-});
+}));
 
 module.exports = router;

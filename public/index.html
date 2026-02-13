@@ -45,7 +45,7 @@
         <i data-lucide="map-pin"></i>
         <span>MoneyMap</span>
       </div>
-      <nav class="sidebar-nav">
+      <nav class="sidebar-nav" role="navigation">
         <a href="#dashboard" class="nav-item active" data-view="dashboard">
           <i data-lucide="layout-dashboard"></i>
           <span>Dashboard</span>
@@ -80,13 +80,13 @@
       <div class="top-bar">
         <h1 id="page-title">Dashboard</h1>
         <div class="top-bar-actions">
-          <button id="notif-bell-btn" class="btn btn-icon notif-bell" title="Reminders">
+          <button id="notif-bell-btn" class="btn btn-icon notif-bell" title="Reminders" aria-label="Open reminders">
             <i data-lucide="bell"></i>
             <span id="notif-badge" class="notif-badge" style="display:none">0</span>
           </button>
-          <button id="add-expense-btn" class="btn btn-primary">
+          <button id="add-expense-btn" class="btn btn-primary" aria-label="Add new expense">
             <i data-lucide="plus"></i>
-            Add Expense
+            <span class="add-expense-text">Add Expense</span>
           </button>
         </div>
       </div>
@@ -130,7 +130,7 @@
   </div>
 
   <!-- Modal Overlay -->
-  <div id="modal-overlay" class="modal-overlay">
+  <div id="modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="expense-form-title">
     <div class="modal">
       <!-- Expense Form -->
       <form id="expense-form" class="modal-form">
@@ -269,8 +269,23 @@
     </div>
   </div>
 
+  <!-- Confirm Modal Overlay -->
+  <div id="confirm-overlay" class="confirm-overlay" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-message">
+    <div class="confirm-modal">
+      <div class="confirm-icon">
+        <i data-lucide="alert-triangle"></i>
+      </div>
+      <h3 id="confirm-title" class="confirm-title">Confirm Delete</h3>
+      <p id="confirm-message" class="confirm-message">Are you sure?</p>
+      <div class="confirm-actions">
+        <button id="confirm-cancel-btn" class="btn btn-secondary">Cancel</button>
+        <button id="confirm-ok-btn" class="btn btn-danger">Delete</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Container -->
-  <div id="toast-container" class="toast-container"></div>
+  <div id="toast-container" class="toast-container" role="status" aria-live="polite"></div>
 
   <script src="app.js"></script>
 </body>
