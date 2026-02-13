@@ -17,6 +17,8 @@ const state = {
   theme: localStorage.getItem('moneymap-theme') || 'dark',
   chartInstance: null,
   searchTimeout: null,
+  pagination: { page: 1, pageSize: 50, total: 0 },
+  budgetGoals: [],
 };
 
 // ===== API =====
@@ -68,6 +70,8 @@ const api = {
     if (filters.search) params.set('search', filters.search);
     if (filters.sort) params.set('sort', filters.sort);
     if (filters.order) params.set('order', filters.order);
+    if (filters.limit) params.set('limit', filters.limit);
+    if (filters.offset !== undefined) params.set('offset', filters.offset);
     const qs = params.toString();
     return api.get('/api/expenses' + (qs ? '?' + qs : ''));
   },
@@ -79,6 +83,11 @@ const api = {
   createRecurring: (data) => api.post('/api/recurring', data),
   updateRecurring: (id, data) => api.put(`/api/recurring/${id}`, data),
   deleteRecurring: (id) => api.del(`/api/recurring/${id}`),
+
+  getBudgetGoals: () => api.get('/api/budget-goals'),
+  createBudgetGoal: (data) => api.post('/api/budget-goals', data),
+  updateBudgetGoal: (id, data) => api.put(`/api/budget-goals/${id}`, data),
+  deleteBudgetGoal: (id) => api.del(`/api/budget-goals/${id}`),
 
   getSummary: (month, year) => {
     const params = new URLSearchParams();
@@ -473,20 +482,32 @@ async function renderDashboard() {
   showLoading(container);
 
   try {
-    const [summary, expenses, recurring] = await Promise.all([
+    const [summary, recentRes, chartRes, recurring, budgetGoals] = await Promise.all([
       api.getSummary(),
-      api.getExpenses({ sort: 'date', order: 'desc' }),
+      api.getExpenses({ sort: 'date', order: 'desc', limit: 10 }),
+      api.getExpenses({ sort: 'date', order: 'desc', limit: 500 }),
       api.getRecurring(),
+      api.getBudgetGoals(),
     ]);
     state.summary = summary;
+    state.budgetGoals = budgetGoals;
 
-    const recentExpenses = expenses.slice(0, 10);
+    const recentExpenses = recentRes.data;
+    const chartExpenses = chartRes.data;
     const now = new Date();
     const dueSoon = recurring.filter(r => {
       if (r.status === 'paused') return false;
       const due = new Date(r.next_due + 'T00:00:00');
       const diffDays = (due - now) / (1000 * 60 * 60 * 24);
       return diffDays <= 7;
+    });
+
+    // Build budget goal lookup by category name
+    const budgetByCategory = {};
+    budgetGoals.forEach(bg => {
+      if (bg.categories?.name) {
+        budgetByCategory[bg.categories.name] = parseFloat(bg.monthly_limit);
+      }
     });
 
     // Sort categories by amount descending
@@ -512,12 +533,27 @@ async function renderDashboard() {
         </div>
         <div class="summary-card">
           <div class="label">By Category</div>
-          ${catEntries.length ? catEntries.map(([name, amt]) => `
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
-              <span class="badge ${getCategoryBadgeClass(name)}">${escapeHtml(name)}</span>
-              <span style="font-weight:600;font-variant-numeric:tabular-nums">${formatCurrency(amt)}</span>
-            </div>
-          `).join('') : '<div style="color:var(--text-muted);margin-top:8px">No expenses yet</div>'}
+          ${catEntries.length ? catEntries.map(([name, amt]) => {
+            const budget = budgetByCategory[name];
+            let progressHtml = '';
+            if (budget) {
+              const pct = Math.min((amt / budget) * 100, 100);
+              const colorClass = pct > 80 ? 'red' : pct > 50 ? 'orange' : 'green';
+              progressHtml = `
+                <div class="budget-progress"><div class="budget-progress-fill ${colorClass}" style="width:${pct}%"></div></div>
+                <div class="budget-text">${formatCurrency(amt)} / ${formatCurrency(budget)} (${Math.round((amt / budget) * 100)}%)</div>
+              `;
+            }
+            return `
+              <div style="margin-top:8px">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                  <span class="badge ${getCategoryBadgeClass(name)}">${escapeHtml(name)}</span>
+                  <span style="font-weight:600;font-variant-numeric:tabular-nums">${formatCurrency(amt)}</span>
+                </div>
+                ${progressHtml}
+              </div>
+            `;
+          }).join('') : '<div style="color:var(--text-muted);margin-top:8px">No expenses yet</div>'}
         </div>
         <div class="summary-card">
           <div class="label">Recurring Due Soon</div>
@@ -589,7 +625,7 @@ async function renderDashboard() {
     `;
 
     // Build chart
-    buildSpendingChart(expenses);
+    buildSpendingChart(chartExpenses);
     lucide.createIcons();
   } catch (err) {
     showError(container, 'Failed to load dashboard: ' + err.message);
@@ -744,6 +780,7 @@ async function renderTransactions() {
 function attachFilterListeners() {
   const changeHandler = () => {
     updateFiltersFromInputs();
+    state.pagination.page = 1;
     fetchAndRenderTransactions();
   };
 
@@ -758,6 +795,7 @@ function attachFilterListeners() {
       clearTimeout(state.searchTimeout);
       state.searchTimeout = setTimeout(() => {
         updateFiltersFromInputs();
+        state.pagination.page = 1;
         fetchAndRenderTransactions();
       }, 300);
     });
@@ -782,13 +820,20 @@ async function fetchAndRenderTransactions() {
   showLoading(area);
 
   try {
+    const offset = (state.pagination.page - 1) * state.pagination.pageSize;
     const filters = {
       ...state.expenseFilters,
       sort: state.expenseSort.col,
       order: state.expenseSort.order,
+      limit: state.pagination.pageSize,
+      offset,
     };
-    const expenses = await api.getExpenses(filters);
+    const response = await api.getExpenses(filters);
+    const expenses = response.data;
     state.expenses = expenses;
+    state.pagination.total = response.total;
+
+    const totalPages = Math.max(1, Math.ceil(response.total / state.pagination.pageSize));
 
     if (expenses.length === 0) {
       const hasFilters = Object.values(state.expenseFilters).some(v => v);
@@ -841,7 +886,41 @@ async function fetchAndRenderTransactions() {
           `).join('')}
         </tbody>
       </table>
+      <div class="pagination-bar">
+        <div class="pagination-left">
+          <label for="page-size-select" style="margin-bottom:0;display:inline;margin-right:6px">Show</label>
+          <select id="page-size-select" class="page-size-select">
+            <option value="25" ${state.pagination.pageSize === 25 ? 'selected' : ''}>25</option>
+            <option value="50" ${state.pagination.pageSize === 50 ? 'selected' : ''}>50</option>
+            <option value="100" ${state.pagination.pageSize === 100 ? 'selected' : ''}>100</option>
+          </select>
+        </div>
+        <div class="pagination-info">Page ${state.pagination.page} of ${totalPages}</div>
+        <div class="pagination-right">
+          <button class="btn btn-secondary btn-sm pagination-btn" id="pagination-prev" ${state.pagination.page <= 1 ? 'disabled' : ''}>Previous</button>
+          <button class="btn btn-secondary btn-sm pagination-btn" id="pagination-next" ${state.pagination.page >= totalPages ? 'disabled' : ''}>Next</button>
+        </div>
+      </div>
     `;
+
+    // Pagination handlers
+    document.getElementById('pagination-prev')?.addEventListener('click', () => {
+      if (state.pagination.page > 1) {
+        state.pagination.page--;
+        fetchAndRenderTransactions();
+      }
+    });
+    document.getElementById('pagination-next')?.addEventListener('click', () => {
+      if (state.pagination.page < totalPages) {
+        state.pagination.page++;
+        fetchAndRenderTransactions();
+      }
+    });
+    document.getElementById('page-size-select')?.addEventListener('change', (e) => {
+      state.pagination.pageSize = parseInt(e.target.value);
+      state.pagination.page = 1;
+      fetchAndRenderTransactions();
+    });
 
     // Sort click handlers
     area.querySelectorAll('th[data-sort]').forEach(th => {
@@ -853,6 +932,7 @@ async function fetchAndRenderTransactions() {
           state.expenseSort.col = col;
           state.expenseSort.order = col === 'amount' ? 'desc' : 'asc';
         }
+        state.pagination.page = 1;
         fetchAndRenderTransactions();
       });
     });
@@ -890,14 +970,14 @@ async function renderCategories() {
   showLoading(container);
 
   try {
-    const [summary, expenses] = await Promise.all([
+    const [summary, expensesRes] = await Promise.all([
       api.getSummary(),
-      api.getExpenses(),
+      api.getExpenses({ limit: 500 }),
     ]);
 
     // Count expenses per category
     const countByCategory = {};
-    expenses.forEach(e => {
+    expensesRes.data.forEach(e => {
       const name = e.categories?.name || 'Uncategorized';
       countByCategory[name] = (countByCategory[name] || 0) + 1;
     });
@@ -1066,9 +1146,19 @@ function attachAddRecurringBtn() {
 }
 
 // ===== Settings View =====
-function renderSettings() {
+async function renderSettings() {
   const container = document.getElementById('view-settings');
   const isLight = state.theme === 'light';
+
+  let budgetGoals = [];
+  try {
+    budgetGoals = await api.getBudgetGoals();
+    state.budgetGoals = budgetGoals;
+  } catch { /* ignore */ }
+
+  // Map goal by category_id
+  const goalByCatId = {};
+  budgetGoals.forEach(bg => { goalByCatId[bg.category_id] = bg; });
 
   container.innerHTML = `
     <div class="settings-section">
@@ -1085,6 +1175,24 @@ function renderSettings() {
       </div>
     </div>
     <div class="settings-section" style="margin-top:32px">
+      <h3>Budget Goals</h3>
+      <p class="setting-description" style="margin-bottom:12px">Set monthly spending limits per category</p>
+      ${state.categories.map(cat => {
+        const goal = goalByCatId[cat.id];
+        return `
+          <div class="budget-row" data-category-id="${cat.id}" data-goal-id="${goal?.id || ''}">
+            <span class="badge ${getCategoryBadgeClass(cat.name)}">${escapeHtml(cat.name)}</span>
+            <div class="budget-row-input">
+              <span class="budget-dollar">$</span>
+              <input type="number" class="budget-limit-input" step="0.01" min="0" placeholder="No limit" value="${goal ? goal.monthly_limit : ''}">
+            </div>
+            <button class="btn btn-sm btn-primary budget-save-btn">Save</button>
+            ${goal ? '<button class="btn btn-sm btn-danger budget-remove-btn">Remove</button>' : ''}
+          </div>
+        `;
+      }).join('')}
+    </div>
+    <div class="settings-section" style="margin-top:32px">
       <h3>Coming Soon</h3>
       <div class="setting-row">
         <div>
@@ -1098,12 +1206,6 @@ function renderSettings() {
           <div class="setting-description">Download your expenses as CSV</div>
         </div>
       </div>
-      <div class="setting-row">
-        <div>
-          <div class="setting-label">Budget Goals</div>
-          <div class="setting-description">Set monthly spending limits per category</div>
-        </div>
-      </div>
     </div>
   `;
 
@@ -1111,11 +1213,55 @@ function renderSettings() {
     state.theme = e.target.checked ? 'light' : 'dark';
     document.documentElement.setAttribute('data-theme', state.theme);
     localStorage.setItem('moneymap-theme', state.theme);
-    // Re-render chart if on dashboard to update colors
     if (state.chartInstance) {
       state.chartInstance.destroy();
       state.chartInstance = null;
     }
+  });
+
+  // Budget save handlers
+  container.querySelectorAll('.budget-save-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const row = btn.closest('.budget-row');
+      const catId = row.dataset.categoryId;
+      const goalId = row.dataset.goalId;
+      const input = row.querySelector('.budget-limit-input');
+      const value = parseFloat(input.value);
+
+      if (!value || value <= 0) {
+        showToast('Enter a valid amount', 'warning');
+        return;
+      }
+
+      try {
+        if (goalId) {
+          await api.updateBudgetGoal(goalId, { monthly_limit: value });
+        } else {
+          await api.createBudgetGoal({ category_id: catId, monthly_limit: value });
+        }
+        showToast('Budget goal saved', 'success');
+        renderSettings();
+      } catch (err) {
+        showToast('Failed to save budget goal: ' + err.message, 'error');
+      }
+    });
+  });
+
+  // Budget remove handlers
+  container.querySelectorAll('.budget-remove-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const row = btn.closest('.budget-row');
+      const goalId = row.dataset.goalId;
+      if (!goalId) return;
+
+      try {
+        await api.deleteBudgetGoal(goalId);
+        showToast('Budget goal removed', 'success');
+        renderSettings();
+      } catch (err) {
+        showToast('Failed to remove budget goal: ' + err.message, 'error');
+      }
+    });
   });
 }
 

@@ -66,3 +66,15 @@ CREATE POLICY "Allow all on businesses" ON businesses FOR ALL USING (true) WITH 
 CREATE POLICY "Allow all on payment_methods" ON payment_methods FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all on expenses" ON expenses FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all on recurring_expenses" ON recurring_expenses FOR ALL USING (true) WITH CHECK (true);
+
+-- Budget goals table
+CREATE TABLE IF NOT EXISTS budget_goals (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  category_id UUID NOT NULL REFERENCES categories(id) UNIQUE,
+  monthly_limit NUMERIC(10,2) NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE budget_goals ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all on budget_goals" ON budget_goals FOR ALL USING (true) WITH CHECK (true);

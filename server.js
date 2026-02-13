@@ -60,6 +60,7 @@ app.use('/api/payment-methods', requireAuth, require('./routes/paymentMethods'))
 app.use('/api/expenses', requireAuth, require('./routes/expenses'));
 app.use('/api/recurring', requireAuth, require('./routes/recurring'));
 app.use('/api/summary', requireAuth, require('./routes/summary'));
+app.use('/api/budget-goals', requireAuth, require('./routes/budgetGoals'));
 
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));

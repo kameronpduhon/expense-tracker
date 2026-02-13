@@ -2,17 +2,21 @@ const express = require('express');
 const router = express.Router();
 const supabase = require('../supabaseClient');
 
-// GET /api/expenses — list with filtering & sorting
+// GET /api/expenses — list with filtering, sorting & pagination
 router.get('/', async (req, res) => {
   const {
     category, business, who, payment_method,
     start_date, end_date, search,
-    sort = 'date', order = 'desc'
+    sort = 'date', order = 'desc',
+    limit: limitStr, offset: offsetStr
   } = req.query;
+
+  const limit = Math.min(Math.max(parseInt(limitStr) || 50, 1), 500);
+  const offset = Math.max(parseInt(offsetStr) || 0, 0);
 
   let query = supabase
     .from('expenses')
-    .select('*, categories(name), businesses(name), payment_methods(name)');
+    .select('*, categories(name), businesses(name), payment_methods(name)', { count: 'exact' });
 
   if (category) query = query.eq('category_id', category);
   if (business) query = query.eq('business_id', business);
@@ -24,10 +28,11 @@ router.get('/', async (req, res) => {
 
   const ascending = order === 'asc';
   query = query.order(sort, { ascending });
+  query = query.range(offset, offset + limit - 1);
 
-  const { data, error } = await query;
+  const { data, error, count } = await query;
   if (error) return res.status(500).json({ error: error.message });
-  res.json(data);
+  res.json({ data, total: count, limit, offset });
 });
 
 // GET /api/expenses/:id
