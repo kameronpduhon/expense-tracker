@@ -387,8 +387,9 @@ The following features are planned for future versions:
 - [ ] Export to CSV/PDF
 - [ ] Mobile app / PWA
 - [ ] Multi-user authentication
-- [ ] Charts and graphs
+- [x] Charts and graphs (cumulative monthly spending chart implemented)
 - [ ] Bank account integration
+- [ ] Receipt image upload
 
 ---
 
@@ -398,8 +399,16 @@ The following features are planned for future versions:
 moneymap/
 ├── README.md
 ├── PRD.md
+
 ├── package.json
 ├── server.js
+├── routes/
+│   ├── businesses.js
+│   ├── categories.js
+│   ├── expenses.js
+│   ├── paymentMethods.js
+│   ├── recurring.js
+│   └── summary.js
 ├── public/
 │   ├── index.html
 │   ├── styles.css
@@ -414,10 +423,10 @@ moneymap/
 | Phase | Description | Status |
 |-------|-------------|--------|
 | 1 | PRD & Planning | ✅ Complete |
-| 2 | Database Setup (Supabase) | 🔲 Not Started |
-| 3 | Backend API | 🔲 Not Started |
-| 4 | Frontend (after UI reference) | 🔲 Waiting on UI |
-| 5 | Recurring Expenses & Notifications | 🔲 Not Started |
+| 2 | Database Setup (Supabase) | ✅ Complete |
+| 3 | Backend API (Express routes) | ✅ Complete |
+| 4 | Frontend UI (Dashboard, Transactions, Categories, Recurring, Settings) | ✅ Complete |
+| 5 | Authentication, Toast Notifications, Form Validation, Reminders Panel | ✅ Complete |
 | 6 | Testing & Polish | 🔲 Not Started |
 | 7 | Deploy | 🔲 Not Started |
 
@@ -425,9 +434,11 @@ moneymap/
 
 ## Notes
 
-- Kameron will provide a UI reference/sample before frontend development begins
 - Data stored in Supabase for security and future multi-device sync
 - App name: **MoneyMap** 🗺️💰
+- Auth uses bcrypt password hashing with express-session (7-day cookie)
+- All API routes are protected behind session-based authentication
+- Toast notifications replace all browser alerts for better UX
 
 ---
 
