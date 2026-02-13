@@ -12,9 +12,15 @@ A personal expense tracker to log business and personal expenses, track recurrin
 - **Filters & Sorting** — Filter by date, category, business, who, payment method; sort by column
 - **Who Bought It** — Track purchases by Kameron, CC, or Shared
 - **Password Authentication** — Session-based login with bcrypt
+- **Budget Goals** — Set monthly spending limits per category with progress tracking
 - **Toast Notifications** — Success/error toasts replace browser alerts
 - **Form Validation** — Inline field validation with error messages
 - **Reminders Panel** — Bell icon shows overdue/today/upcoming recurring expenses
+- **CSV Export** — Download filtered transactions as CSV
+- **Skeleton Loaders** — Shimmer animations while data loads
+- **Styled Confirm Modals** — Custom delete confirmation dialogs
+- **Accessible** — ARIA attributes, focus trapping, keyboard navigation
+- **Responsive Design** — Mobile-friendly at 1024px, 768px, and 480px breakpoints
 - **Dark/Light Mode** — Theme toggle in Settings
 
 ## Tech Stack
@@ -72,9 +78,10 @@ Visit `http://localhost:3000`. Log in with your password.
 moneymap/
 ├── server.js              # Express server, auth middleware
 ├── routes/
+│   ├── budgetGoals.js     # CRUD /api/budget-goals
 │   ├── businesses.js      # GET /api/businesses
 │   ├── categories.js      # GET /api/categories
-│   ├── expenses.js        # CRUD /api/expenses
+│   ├── expenses.js        # CRUD /api/expenses + GET /export
 │   ├── paymentMethods.js  # GET /api/payment-methods
 │   ├── recurring.js       # CRUD /api/recurring
 │   └── summary.js         # GET /api/summary
@@ -90,7 +97,7 @@ moneymap/
 
 ## Status
 
-Phases 1-5 complete. See [PRD.md](./PRD.md) for full milestones.
+Phases 1-7 complete. See [PRD.md](./PRD.md) for full milestones.
 
 ## License
 

@@ -104,7 +104,7 @@ Each expense captures the following fields:
 
 - **Theme**: Dark mode (default), with light mode toggle
 - **Platform**: Desktop browser (primary)
-- **Responsive**: Future enhancement
+- **Responsive**: Mobile-friendly with breakpoints at 1024px, 768px, and 480px
 - **UI Reference**: See `/ui-inspo/` folder — Inspo 3 (Copilot) is primary reference
 
 ---
@@ -383,13 +383,17 @@ Located in `/ui-inspo/` folder:
 
 The following features are planned for future versions:
 
-- [ ] Budget tracking (per category, overall)
-- [ ] Export to CSV/PDF
+- [x] Budget tracking (per category, overall) — budget goals with monthly limits implemented
+- [x] Export to CSV — CSV export with current filters implemented
+- [ ] Export to PDF
 - [ ] Mobile app / PWA
 - [ ] Multi-user authentication
 - [x] Charts and graphs (cumulative monthly spending chart implemented)
 - [ ] Bank account integration
 - [ ] Receipt image upload
+- [x] Responsive design — three breakpoints (1024px, 768px, 480px)
+- [x] Skeleton loading states — shimmer animations for all views
+- [x] Accessible UI — ARIA attributes, focus trapping, keyboard navigation
 
 ---
 
@@ -403,6 +407,7 @@ moneymap/
 ├── package.json
 ├── server.js
 ├── routes/
+│   ├── budgetGoals.js
 │   ├── businesses.js
 │   ├── categories.js
 │   ├── expenses.js
@@ -427,8 +432,9 @@ moneymap/
 | 3 | Backend API (Express routes) | ✅ Complete |
 | 4 | Frontend UI (Dashboard, Transactions, Categories, Recurring, Settings) | ✅ Complete |
 | 5 | Authentication, Toast Notifications, Form Validation, Reminders Panel | ✅ Complete |
-| 6 | Testing & Polish | 🔲 Not Started |
-| 7 | Deploy | 🔲 Not Started |
+| 6 | Budget Goals, Transaction Pagination | ✅ Complete |
+| 7 | Testing & Polish (Error Handling, CSV Export, Confirm Modals, Skeletons, Accessibility, Responsive) | ✅ Complete |
+| 8 | Deploy | 🔲 Not Started |
 
 ---
 
@@ -439,6 +445,13 @@ moneymap/
 - Auth uses bcrypt password hashing with express-session (7-day cookie)
 - All API routes are protected behind session-based authentication
 - Toast notifications replace all browser alerts for better UX
+- All route handlers wrapped in asyncHandler with global Express error handler
+- Custom styled confirmation modals replace browser confirm() dialogs
+- CSV export available on Transactions view with current filters applied
+- Budget goals allow setting monthly spending limits per category
+- Skeleton loading animations for all views (dashboard, transactions, categories, recurring)
+- ARIA attributes, focus trapping, and keyboard navigation for accessibility
+- Responsive layout with three breakpoints (1024px tablet, 768px mobile, 480px small phone)
 
 ---
 
