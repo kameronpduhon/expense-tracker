@@ -1,13 +1,277 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MoneyMap</title>
   <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    // Apply saved theme before paint to prevent flash
+    (function() {
+      const theme = localStorage.getItem('moneymap-theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
 </head>
 <body>
-  <h1>MoneyMap</h1>
+  <!-- Login Screen -->
+  <div id="login-screen" class="login-screen">
+    <div class="login-card">
+      <div class="login-logo">
+        <i data-lucide="map-pin"></i>
+        <span>MoneyMap</span>
+      </div>
+      <p class="login-subtitle">Enter your password to continue</p>
+      <form id="login-form">
+        <div class="form-group">
+          <label for="login-password">Password</label>
+          <input type="password" id="login-password" placeholder="Enter password" required autofocus>
+        </div>
+        <div id="login-error" class="login-error" style="display:none"></div>
+        <button type="submit" id="login-btn" class="btn btn-primary login-submit">
+          <span class="login-btn-text">Sign In</span>
+          <span class="btn-spinner" style="display:none"></span>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div class="app-layout" style="display:none">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <i data-lucide="map-pin"></i>
+        <span>MoneyMap</span>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="#dashboard" class="nav-item active" data-view="dashboard">
+          <i data-lucide="layout-dashboard"></i>
+          <span>Dashboard</span>
+        </a>
+        <a href="#transactions" class="nav-item" data-view="transactions">
+          <i data-lucide="receipt"></i>
+          <span>Transactions</span>
+        </a>
+        <a href="#categories" class="nav-item" data-view="categories">
+          <i data-lucide="tag"></i>
+          <span>Categories</span>
+        </a>
+        <a href="#recurring" class="nav-item" data-view="recurring">
+          <i data-lucide="repeat"></i>
+          <span>Recurring</span>
+        </a>
+        <a href="#settings" class="nav-item" data-view="settings">
+          <i data-lucide="settings"></i>
+          <span>Settings</span>
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <button id="logout-btn" class="btn btn-secondary logout-btn">
+          <i data-lucide="log-out"></i>
+          <span>Log Out</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <div class="top-bar">
+        <h1 id="page-title">Dashboard</h1>
+        <div class="top-bar-actions">
+          <button id="notif-bell-btn" class="btn btn-icon notif-bell" title="Reminders">
+            <i data-lucide="bell"></i>
+            <span id="notif-badge" class="notif-badge" style="display:none">0</span>
+          </button>
+          <button id="add-expense-btn" class="btn btn-primary">
+            <i data-lucide="plus"></i>
+            Add Expense
+          </button>
+        </div>
+      </div>
+
+      <!-- Dashboard View -->
+      <div class="view active" id="view-dashboard">
+        <div class="loading-spinner"></div>
+      </div>
+
+      <!-- Transactions View -->
+      <div class="view" id="view-transactions">
+        <div class="loading-spinner"></div>
+      </div>
+
+      <!-- Categories View -->
+      <div class="view" id="view-categories">
+        <div class="loading-spinner"></div>
+      </div>
+
+      <!-- Recurring View -->
+      <div class="view" id="view-recurring">
+        <div class="loading-spinner"></div>
+      </div>
+
+      <!-- Settings View -->
+      <div class="view" id="view-settings">
+        <div class="loading-spinner"></div>
+      </div>
+    </main>
+
+    <!-- Notification Panel -->
+    <aside id="notif-panel" class="notif-panel">
+      <div class="notif-panel-header">
+        <h3>Reminders</h3>
+        <button id="notif-close-btn" class="btn btn-icon" aria-label="Close">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div id="notif-panel-content" class="notif-panel-content"></div>
+    </aside>
+  </div>
+
+  <!-- Modal Overlay -->
+  <div id="modal-overlay" class="modal-overlay">
+    <div class="modal">
+      <!-- Expense Form -->
+      <form id="expense-form" class="modal-form">
+        <div class="modal-header">
+          <h2 id="expense-form-title">Add Expense</h2>
+          <button type="button" class="btn btn-icon modal-close" aria-label="Close">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <input type="hidden" id="expense-id">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="expense-amount">Amount *</label>
+            <input type="number" id="expense-amount" step="0.01" min="0" required placeholder="0.00">
+          </div>
+          <div class="form-group">
+            <label for="expense-date">Date</label>
+            <input type="date" id="expense-date">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="expense-description">Description *</label>
+          <input type="text" id="expense-description" required placeholder="What was this for?">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="expense-category">Category *</label>
+            <select id="expense-category" required>
+              <option value="">Select category</option>
+            </select>
+          </div>
+          <div class="form-group" id="expense-business-group" style="display:none">
+            <label for="expense-business">Business</label>
+            <select id="expense-business">
+              <option value="">Select business</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="expense-who">Who Bought It *</label>
+            <select id="expense-who" required>
+              <option value="">Select who</option>
+              <option value="Kameron">Kameron</option>
+              <option value="CC">CC</option>
+              <option value="Shared">Shared</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="expense-payment">Payment Method</label>
+            <select id="expense-payment">
+              <option value="">Select method</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="expense-notes">Notes</label>
+          <textarea id="expense-notes" rows="2" placeholder="Optional notes..."></textarea>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary modal-close">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Expense</button>
+        </div>
+      </form>
+
+      <!-- Recurring Form -->
+      <form id="recurring-form" class="modal-form" style="display:none">
+        <div class="modal-header">
+          <h2 id="recurring-form-title">Add Recurring Expense</h2>
+          <button type="button" class="btn btn-icon modal-close" aria-label="Close">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <input type="hidden" id="recurring-id">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="recurring-name">Name *</label>
+            <input type="text" id="recurring-name" required placeholder="e.g. Netflix">
+          </div>
+          <div class="form-group">
+            <label for="recurring-amount">Amount *</label>
+            <input type="number" id="recurring-amount" step="0.01" min="0" required placeholder="0.00">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="recurring-frequency">Frequency *</label>
+            <select id="recurring-frequency" required>
+              <option value="">Select frequency</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+              <option value="yearly">Yearly</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="recurring-next-due">Next Due *</label>
+            <input type="date" id="recurring-next-due" required>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="recurring-category">Category *</label>
+            <select id="recurring-category" required>
+              <option value="">Select category</option>
+            </select>
+          </div>
+          <div class="form-group" id="recurring-business-group" style="display:none">
+            <label for="recurring-business">Business</label>
+            <select id="recurring-business">
+              <option value="">Select business</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="recurring-who">Who Bought It *</label>
+            <select id="recurring-who" required>
+              <option value="">Select who</option>
+              <option value="Kameron">Kameron</option>
+              <option value="CC">CC</option>
+              <option value="Shared">Shared</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="recurring-payment">Payment Method</label>
+            <select id="recurring-payment">
+              <option value="">Select method</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary modal-close">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Recurring</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="toast-container"></div>
+
   <script src="app.js"></script>
 </body>
 </html>
