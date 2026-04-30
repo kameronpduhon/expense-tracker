@@ -2,7 +2,7 @@
 
 ## Overview
 
-MoneyMap is a personal expense tracker to log business and personal expenses, track recurring costs, and see spending summaries. Built for Kameron (and eventually CC) to manage finances across multiple businesses and personal life.
+MoneyMap is a self-hosted personal expense tracker. It logs business and personal expenses, tracks recurring costs, and produces spending summaries across multiple side businesses and personal life.
 
 ---
 
@@ -16,10 +16,10 @@ Each expense captures the following fields:
 |-------|----------|-------------|
 | Amount | ✅ | Dollar amount of expense |
 | Description | ✅ | Name/description of expense |
-| Category | ✅ | Business, Wedding, Personal, or Custom |
+| Category | ✅ | Business, Personal, or Custom |
 | Date | ✅ | Date of expense |
-| Business | If Business | Which business (Wedding Vendor HQ, HVAC Platform, or custom) |
-| Who Bought It | ✅ | Kameron, CC, or Shared |
+| Business | If Business | Which business (configurable in seed data) |
+| Who Bought It | ✅ | User, Partner, or Shared |
 | Payment Method | Optional | Cash, Card, Bank, Other |
 | Receipt Image | Optional | Photo upload of receipt |
 | Notes | Optional | Additional notes |
@@ -53,7 +53,7 @@ Each expense captures the following fields:
 - Total by business
 - Total by who bought it
 - Comparison to last month (% up/down)
-- Charts/graphs (future enhancement)
+- Charts/graphs
 
 ### 5. Notification Sidebar
 
@@ -65,19 +65,16 @@ Each expense captures the following fields:
 ## Pre-loaded Data
 
 ### Businesses
-- Wedding Vendor HQ
-- HVAC Platform
-- *(Can add custom)*
+- Two example placeholders (configurable in `db/seed.sql`)
 
 ### Categories
 - Business
-- Wedding
 - Personal
 - Custom
 
 ### Who Bought It
-- Kameron
-- CC
+- User
+- Partner
 - Shared
 
 ### Payment Methods
@@ -105,15 +102,12 @@ Each expense captures the following fields:
 - **Theme**: Dark mode (default), with light mode toggle
 - **Platform**: Desktop browser (primary)
 - **Responsive**: Mobile-friendly with breakpoints at 1024px, 768px, and 480px
-- **UI Reference**: See `/ui-inspo/` folder — Inspo 3 (Copilot) is primary reference
 
 ---
 
 ## UI Requirements
 
 ### Overall Layout
-
-Based on **Inspo 3 (Copilot)** as the primary reference.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -153,24 +147,22 @@ Fixed left sidebar with navigation items:
 
 | Nav Item | Icon | Description |
 |----------|------|-------------|
-| Dashboard | 📊 grid icon | Overview with stats and graph |
-| Transactions | 📝 list icon | All expenses list |
-| Categories | 🏷️ tag icon | View by category |
-| Recurring | 🔄 refresh icon | Manage recurring expenses |
-| Settings | ⚙️ gear icon | App settings |
+| Dashboard | grid icon | Overview with stats and graph |
+| Transactions | list icon | All expenses list |
+| Categories | tag icon | View by category |
+| Recurring | refresh icon | Manage recurring expenses |
+| Settings | gear icon | App settings |
 
 **Sidebar behavior:**
 - Fixed width (~220px)
 - Active item highlighted with accent color
 - Icons + text labels
-- Collapsible (future enhancement)
 
 ### Dashboard View (Main)
 
 The primary view users see. Includes:
 
-#### 1. Monthly Spending Graph (Hero Element)
-*Reference: Inspo 3*
+#### 1. Monthly Spending Graph
 
 - **Line chart** showing spending over the current month
 - X-axis: Days of month (1-31)
@@ -198,16 +190,14 @@ Three cards showing key metrics:
 - "View All" link to Transactions page
 - Quick actions on hover (edit, delete)
 
-#### 4. Top Categories (Right Side or Below)
-*Reference: Inspo 3*
+#### 4. Top Categories
 
 - Vertical list of categories with spending amounts
 - Small progress bar or icon per category
 - Shows top 5-6 categories
 - Color-coded category badges
 
-#### 5. Notification/Reminders Area
-*Reference: Inspo 1 "Upcoming Bills"*
+#### 5. Notification / Reminders Area
 
 - Shows upcoming recurring expenses
 - Each item: Due date, Name, Amount, "Mark Paid" button
@@ -234,7 +224,7 @@ Full list of all expenses with:
 | Description | Name/description |
 | Category | Badge with category name |
 | Business | If applicable |
-| Who | Kameron / CC / Shared |
+| Who | User / Partner / Shared |
 | Amount | Dollar amount (right-aligned) |
 | Actions | Edit / Delete buttons (on hover) |
 
@@ -274,10 +264,10 @@ Triggered by a prominent "+ Add Expense" button (top right or floating).
 **Form Fields:**
 1. Amount (input, required) — large, prominent
 2. Description (input, required)
-3. Category (dropdown, required) — Business, Wedding, Personal, Custom
+3. Category (dropdown, required) — Business, Personal, Custom
 4. Business (dropdown, conditional) — shows if Category = Business
 5. Date (date picker, required) — defaults to today
-6. Who Bought It (dropdown, required) — Kameron, CC, Shared
+6. Who Bought It (dropdown, required) — User, Partner, Shared
 7. Payment Method (dropdown, optional) — Cash, Card, Bank, Other
 8. Receipt (file upload, optional) — image upload
 9. Notes (textarea, optional)
@@ -303,7 +293,6 @@ Triggered by a prominent "+ Add Expense" button (top right or floating).
 - Small, rounded pills
 - Color-coded by category
 - Business: Blue
-- Wedding: Pink
 - Personal: Green
 - Custom: Purple/Gray
 
@@ -334,9 +323,7 @@ Triggered by a prominent "+ Add Expense" button (top right or floating).
 
 ### Icons
 
-Use a consistent icon set:
-- Lucide icons (recommended, same as Mission Control)
-- Or Heroicons / Feather Icons
+- Lucide icons
 - Stroke-based, 1.5-2px stroke width
 - Size: 16-20px typically
 
@@ -359,31 +346,16 @@ When no data exists, show helpful empty states:
 
 ---
 
-## UI Reference Images
-
-Located in `/ui-inspo/` folder:
-
-| File | Description | Use For |
-|------|-------------|---------|
-| inspo 1.png | FIQ app | Card styling, upcoming bills section |
-| inspo 2.png | Other Level's | Category icons, month selector |
-| inspo 3.jpg | Copilot app | **Primary reference** — layout, monthly spending graph, sidebar nav |
-
----
-
 ## User Access
 
-- **Phase 1**: Single user (Kameron)
-- **Phase 2**: Shared account with CC (track who bought it)
-- **Future**: Multi-user with separate accounts
+- Single-user, password protected
+- Multi-user authentication is future scope
 
 ---
 
 ## Out of Scope (v1)
 
-The following features are planned for future versions:
-
-- [x] Budget tracking (per category, overall) — budget goals with monthly limits implemented
+- [x] Budget tracking — budget goals with monthly limits implemented
 - [x] Export to CSV — CSV export with current filters implemented
 - [ ] Export to PDF
 - [ ] Mobile app / PWA
@@ -418,7 +390,10 @@ moneymap/
 │   ├── index.html
 │   ├── styles.css
 │   └── app.js
-└── .env
+├── db/
+│   ├── schema.sql
+│   └── seed.sql
+└── .env.example
 ```
 
 ---
@@ -440,19 +415,14 @@ moneymap/
 
 ## Notes
 
-- Data stored in Supabase for security and future multi-device sync
-- App name: **MoneyMap** 🗺️💰
-- Auth uses bcrypt password hashing with express-session (7-day cookie)
+- Data stored in Supabase for persistence and future multi-device sync
+- Auth uses bcryptjs password hashing with express-session (7-day cookie)
 - All API routes are protected behind session-based authentication
-- Toast notifications replace all browser alerts for better UX
-- All route handlers wrapped in asyncHandler with global Express error handler
+- Toast notifications replace browser alerts for better UX
+- Route handlers wrapped with a global Express error handler
 - Custom styled confirmation modals replace browser confirm() dialogs
 - CSV export available on Transactions view with current filters applied
 - Budget goals allow setting monthly spending limits per category
 - Skeleton loading animations for all views (dashboard, transactions, categories, recurring)
 - ARIA attributes, focus trapping, and keyboard navigation for accessibility
 - Responsive layout with three breakpoints (1024px tablet, 768px mobile, 480px small phone)
-
----
-
-*Last updated: February 13, 2026*

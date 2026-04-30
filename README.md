@@ -1,43 +1,40 @@
 # MoneyMap
 
-A personal expense tracker to log business and personal expenses, track recurring costs, and see spending summaries.
+A self-hosted personal expense tracker. Logs business and personal expenses, tracks recurring costs, generates spending summaries, and exports to CSV. Built with Node + Express + Supabase.
+
+I built this because every expense tracker I tried either tied me to a specific bank, sold my data to advertisers, or didn't let me split spending across multiple side businesses. So I rolled my own.
 
 ## Features
 
-- **Expense Tracking** — Log expenses with amount, category, date, and notes
-- **Multiple Categories** — Business, Wedding, Personal, or Custom
-- **Business Tracking** — Track expenses per business (Wedding Vendor HQ, HVAC Platform, etc.)
-- **Recurring Expenses** — Set up weekly/monthly/yearly recurring costs with reminders
-- **Spending Dashboard** — Monthly spending chart, summary cards, recent transactions
-- **Filters & Sorting** — Filter by date, category, business, who, payment method; sort by column
-- **Who Bought It** — Track purchases by Kameron, CC, or Shared
-- **Password Authentication** — Session-based login with bcrypt
-- **Budget Goals** — Set monthly spending limits per category with progress tracking
-- **Toast Notifications** — Success/error toasts replace browser alerts
-- **Form Validation** — Inline field validation with error messages
-- **Reminders Panel** — Bell icon shows overdue/today/upcoming recurring expenses
-- **CSV Export** — Download filtered transactions as CSV
-- **Skeleton Loaders** — Shimmer animations while data loads
-- **Styled Confirm Modals** — Custom delete confirmation dialogs
-- **Accessible** — ARIA attributes, focus trapping, keyboard navigation
-- **Responsive Design** — Mobile-friendly at 1024px, 768px, and 480px breakpoints
-- **Dark/Light Mode** — Theme toggle in Settings
+- Expense tracking with amount, category, date, and notes
+- Categories: Business, Personal, Custom
+- Track expenses per business (configurable in seed data)
+- Recurring expenses with monthly or yearly frequency and reminders
+- Spending dashboard with monthly chart, summary cards, recent transactions
+- Filters and sorting by date, category, business, payer, payment method
+- Password authentication (bcryptjs + express-session)
+- Budget goals with monthly spending limits per category
+- CSV export of filtered transactions
+- Toast notifications, inline form validation, skeleton loaders, styled confirm modals
+- Accessible: ARIA attributes, focus trapping, keyboard navigation
+- Responsive design (1024 / 768 / 480 breakpoints)
+- Dark and light mode
 
 ## Tech Stack
 
-- **Frontend**: HTML, CSS, vanilla JavaScript
-- **Backend**: Node.js with Express
-- **Database**: Supabase (PostgreSQL)
-- **Auth**: bcrypt + express-session
-- **Charts**: Chart.js
-- **Icons**: Lucide
+- Frontend: HTML, CSS, vanilla JavaScript
+- Backend: Node.js with Express 5
+- Database: Supabase (Postgres)
+- Auth: bcryptjs + express-session
+- Charts: Chart.js
+- Icons: Lucide
 
 ## Setup
 
 ### Prerequisites
 
-- Node.js (v18+)
-- A Supabase project with the required tables
+- Node.js v18+
+- A Supabase project
 
 ### Install
 
@@ -45,12 +42,21 @@ A personal expense tracker to log business and personal expenses, track recurrin
 npm install
 ```
 
-### Environment Variables
+### Database
 
-Create a `.env` file in the project root:
+In the Supabase SQL editor, run the contents of:
+
+```
+db/schema.sql
+db/seed.sql
+```
+
+### Environment variables
+
+Copy `.env.example` to `.env` and fill in:
 
 ```env
-SUPABASE_URL=your_supabase_url
+SUPABASE_URL=your_supabase_project_url
 SUPABASE_KEY=your_supabase_anon_key
 PORT=3000
 SESSION_SECRET=your_random_64_char_hex_string
@@ -70,7 +76,7 @@ node -e "console.log(require('bcryptjs').hashSync('your-password', 10))"
 npm start
 ```
 
-Visit `http://localhost:3000`. Log in with your password.
+Visit `http://localhost:3000` and log in with the password you hashed.
 
 ## Project Structure
 
@@ -87,18 +93,16 @@ moneymap/
 │   └── summary.js         # GET /api/summary
 ├── public/
 │   ├── index.html         # Login screen + app shell
-│   ├── styles.css         # All styles (dark/light theme)
+│   ├── styles.css         # All styles (dark / light theme)
 │   └── app.js             # Frontend logic
-├── .env                   # Environment variables (not committed)
-├── PRD.md                 # Product requirements
-              # Claude Code instructions
-└── package.json
+├── db/
+│   ├── schema.sql         # Tables + RLS policies
+│   └── seed.sql           # Default categories, businesses, payment methods
+├── .env.example
+├── package.json
+└── README.md
 ```
-
-## Status
-
-Phases 1-7 complete. See [PRD.md](./PRD.md) for full milestones.
 
 ## License
 
-Private — All rights reserved.
+MIT

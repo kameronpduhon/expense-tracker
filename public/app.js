@@ -115,7 +115,6 @@ function getCategoryBadgeClass(name) {
   if (!name) return 'badge-custom';
   const lower = name.toLowerCase();
   if (lower === 'business') return 'badge-business';
-  if (lower === 'wedding') return 'badge-wedding';
   if (lower === 'personal') return 'badge-personal';
   return 'badge-custom';
 }
@@ -124,7 +123,6 @@ function getCategoryDotClass(name) {
   if (!name) return 'dot-custom';
   const lower = name.toLowerCase();
   if (lower === 'business') return 'dot-business';
-  if (lower === 'wedding') return 'dot-wedding';
   if (lower === 'personal') return 'dot-personal';
   return 'dot-custom';
 }
@@ -902,8 +900,8 @@ async function renderTransactions() {
           <label>Who</label>
           <select id="filter-who">
             <option value="">Everyone</option>
-            <option value="Kameron">Kameron</option>
-            <option value="CC">CC</option>
+            <option value="User">User</option>
+            <option value="Partner">Partner</option>
             <option value="Shared">Shared</option>
           </select>
         </div>

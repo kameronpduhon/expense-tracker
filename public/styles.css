@@ -287,7 +287,6 @@ a {
 }
 
 .badge-business { background: rgba(59, 130, 246, 0.15); color: var(--blue); }
-.badge-wedding { background: rgba(236, 72, 153, 0.15); color: var(--pink); }
 .badge-personal { background: rgba(34, 197, 94, 0.15); color: var(--green); }
 .badge-custom { background: rgba(139, 92, 246, 0.15); color: var(--accent); }
 
@@ -606,7 +605,6 @@ textarea {
 
 /* Category dot colors */
 .dot-business { background: var(--blue); }
-.dot-wedding { background: var(--pink); }
 .dot-personal { background: var(--green); }
 .dot-custom { background: var(--accent); }
 

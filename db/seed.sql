@@ -3,15 +3,14 @@
 -- Categories
 INSERT INTO categories (name) VALUES
   ('Business'),
-  ('Wedding'),
   ('Personal'),
   ('Custom')
 ON CONFLICT (name) DO NOTHING;
 
--- Businesses
+-- Businesses (example placeholders — edit to your own)
 INSERT INTO businesses (name) VALUES
-  ('Wedding Vendor HQ'),
-  ('HVAC Platform')
+  ('Side Project A'),
+  ('Side Project B')
 ON CONFLICT (name) DO NOTHING;
 
 -- Payment Methods
