@@ -1,4 +1,4 @@
-# MoneyMap
+# Expense Tracker
 
 A self-hosted personal expense tracker. Logs business and personal expenses, tracks recurring costs, generates spending summaries, and exports to CSV. Built with Node + Express + Supabase.
 
@@ -81,7 +81,7 @@ Visit `http://localhost:3000` and log in with the password you hashed.
 ## Project Structure
 
 ```
-moneymap/
+expense-tracker/
 ├── server.js              # Express server, auth middleware
 ├── routes/
 │   ├── budgetGoals.js     # CRUD /api/budget-goals
